@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Pipeline izlaz (draft-ovi se generišu lokalno; ne verzionišemo ih)
+pipeline/output/*.json
+pipeline/output/*.md
+!pipeline/output/.gitkeep
+
+# Okruženje
+.env
+.env.local

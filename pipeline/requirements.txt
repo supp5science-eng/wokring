@@ -1,0 +1,4 @@
+# DoseCheck pipeline zavisnosti
+# PubMed korak (pubmed.py, rank.py, ingest.py) koristi SAMO standardnu biblioteku —
+# radi bez ijedne instalacije. Paket ispod treba samo za AI destilaciju (distill.py).
+anthropic>=0.40.0
