@@ -1,0 +1,432 @@
+<title>DoseCheck — mokap toka</title>
+<style>
+  :root {
+    --bg: #F7FAFB; --surface: #FFFFFF; --surface-2: #EEF4F5;
+    --ink: #0F1E22; --muted: #5C7178; --line: #DCE7E9;
+    --accent: #0E9C8A; --accent-soft: #D6F0EC;
+    --good: #16A36A; --good-bg: #E3F5EC;
+    --warn: #C7841F; --warn-bg: #FBF0DA;
+    --bad: #D6432A; --bad-bg: #FBE4DF;
+    --filler: #8497A0; --filler-bg: #EDF1F2;
+    --radius: 16px;
+    --mono: ui-monospace, "SF Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0E1719; --surface: #152325; --surface-2: #1B2C2E;
+      --ink: #E6F0F0; --muted: #90A6AC; --line: #26393B;
+      --accent: #2DD4BF; --accent-soft: #123832;
+      --good: #34C185; --good-bg: #10312A;
+      --warn: #E3AE52; --warn-bg: #33280F;
+      --bad: #F0705A; --bad-bg: #3A1C16;
+      --filler: #7C9098; --filler-bg: #1E2E30;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #F7FAFB; --surface: #FFFFFF; --surface-2: #EEF4F5;
+    --ink: #0F1E22; --muted: #5C7178; --line: #DCE7E9;
+    --accent: #0E9C8A; --accent-soft: #D6F0EC;
+    --good: #16A36A; --good-bg: #E3F5EC; --warn: #C7841F; --warn-bg: #FBF0DA;
+    --bad: #D6432A; --bad-bg: #FBE4DF; --filler: #8497A0; --filler-bg: #EDF1F2;
+  }
+  :root[data-theme="dark"] {
+    --bg: #0E1719; --surface: #152325; --surface-2: #1B2C2E;
+    --ink: #E6F0F0; --muted: #90A6AC; --line: #26393B;
+    --accent: #2DD4BF; --accent-soft: #123832;
+    --good: #34C185; --good-bg: #10312A; --warn: #E3AE52; --warn-bg: #33280F;
+    --bad: #F0705A; --bad-bg: #3A1C16; --filler: #7C9098; --filler-bg: #1E2E30;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--sans); line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    display: flex; justify-content: center; padding: 24px 16px 64px;
+  }
+  .app { width: 100%; max-width: 560px; }
+
+  /* Header */
+  .top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .logo {
+    width: 34px; height: 34px; border-radius: 9px; flex: none;
+    background: var(--accent); color: #fff; display: grid; place-items: center;
+    font-weight: 800; font-size: 18px; letter-spacing: -0.5px;
+  }
+  .brand h1 { font-size: 17px; margin: 0; letter-spacing: -0.3px; }
+  .brand span { display: block; font-size: 11px; color: var(--muted); font-weight: 500; }
+  .profile {
+    display: flex; align-items: center; gap: 8px; background: var(--surface);
+    border: 1px solid var(--line); border-radius: 999px; padding: 5px 11px 5px 6px;
+    font-size: 12px; color: var(--muted);
+  }
+  .avatar { width: 22px; height: 22px; border-radius: 50%; background: var(--accent-soft);
+    color: var(--accent); display: grid; place-items: center; font-weight: 700; font-size: 11px; }
+
+  /* Stepper */
+  .steps { display: flex; gap: 6px; margin-bottom: 20px; }
+  .steps .s { flex: 1; }
+  .steps .bar { height: 4px; border-radius: 2px; background: var(--line); transition: background .3s; }
+  .steps .s.done .bar, .steps .s.active .bar { background: var(--accent); }
+  .steps .lbl { font-size: 11px; margin-top: 7px; color: var(--muted); font-weight: 600;
+    letter-spacing: .02em; text-transform: uppercase; }
+  .steps .s.active .lbl { color: var(--ink); }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 22px; box-shadow: 0 1px 2px rgba(15,30,34,.04);
+  }
+  .panel { display: none; }
+  .panel.on { display: block; animation: rise .35s ease both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .panel.on { animation: none; } }
+
+  .q { font-size: 20px; letter-spacing: -0.4px; margin: 0 0 4px; text-wrap: balance; }
+  .hint { font-size: 13.5px; color: var(--muted); margin: 0 0 18px; }
+
+  /* Category grid */
+  .cats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .cat {
+    text-align: left; background: var(--surface-2); border: 1.5px solid transparent;
+    border-radius: 12px; padding: 14px; cursor: pointer; color: var(--ink);
+    font-family: inherit; transition: border-color .15s, transform .1s;
+    display: flex; gap: 11px; align-items: center;
+  }
+  .cat:hover { border-color: var(--accent); }
+  .cat:active { transform: scale(.985); }
+  .cat .ic { font-size: 20px; }
+  .cat b { font-size: 14px; display: block; }
+  .cat small { font-size: 11.5px; color: var(--muted); }
+
+  /* Ingredient rows */
+  .prod-tag { font-size: 12px; color: var(--muted); margin: -6px 0 14px; }
+  .prod-tag b { color: var(--ink); }
+  .rows { display: flex; flex-direction: column; gap: 9px; }
+  .row { display: grid; grid-template-columns: 1fr 74px 66px 34px; gap: 7px; align-items: center; }
+  .row.head { font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em;
+    color: var(--muted); font-weight: 700; padding: 0 2px; }
+  input, select {
+    font-family: inherit; font-size: 13.5px; color: var(--ink); background: var(--surface);
+    border: 1px solid var(--line); border-radius: 9px; padding: 9px 10px; width: 100%;
+  }
+  input.dose { font-family: var(--mono); text-align: right; }
+  input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+  .del { border: none; background: var(--surface-2); color: var(--muted); border-radius: 9px;
+    height: 36px; cursor: pointer; font-size: 15px; }
+  .del:hover { color: var(--bad); }
+  .add { margin-top: 12px; background: none; border: 1px dashed var(--line); color: var(--accent);
+    border-radius: 10px; padding: 9px; width: 100%; cursor: pointer; font-family: inherit;
+    font-size: 13px; font-weight: 600; }
+  .add:hover { border-color: var(--accent); }
+
+  .actions { display: flex; gap: 10px; margin-top: 18px; }
+  .btn { font-family: inherit; font-size: 14px; font-weight: 650; border-radius: 11px;
+    padding: 12px 16px; cursor: pointer; border: 1px solid transparent; }
+  .btn.primary { background: var(--accent); color: #fff; flex: 1; }
+  .btn.primary:hover { filter: brightness(1.05); }
+  .btn.ghost { background: var(--surface-2); color: var(--ink); border-color: var(--line); }
+
+  /* Verdict */
+  .verdict-top { display: flex; gap: 18px; align-items: center; margin-bottom: 6px; }
+  .ring { width: 108px; height: 108px; border-radius: 50%; flex: none; display: grid; place-items: center;
+    position: relative; }
+  .ring::before { content: ""; position: absolute; inset: 11px; background: var(--surface); border-radius: 50%; }
+  .ring .n { position: relative; font-family: var(--mono); font-size: 30px; font-weight: 700; }
+  .ring .n small { font-size: 12px; color: var(--muted); }
+  .verdict-txt h2 { margin: 0 0 3px; font-size: 21px; letter-spacing: -0.5px; text-wrap: balance; }
+  .verdict-txt .sub { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em;
+    font-weight: 700; }
+  .ai {
+    background: var(--accent-soft); border-radius: 12px; padding: 13px 15px; margin: 16px 0 20px;
+    font-size: 14px; display: flex; gap: 10px; align-items: flex-start;
+  }
+  .ai .k { font-size: 11px; font-weight: 800; color: var(--accent); flex: none; margin-top: 1px;
+    letter-spacing: .04em; }
+
+  .break { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted);
+    font-weight: 700; margin: 0 0 10px; }
+  .ing { border: 1px solid var(--line); border-radius: 12px; padding: 12px 13px; margin-bottom: 9px; }
+  .ing.filler { opacity: .82; }
+  .ing-h { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 9px; }
+  .ing-h b { font-size: 14.5px; }
+  .ing-h .amt { font-family: var(--mono); font-size: 13px; color: var(--muted); }
+  .checks { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; }
+  .chk { border-radius: 9px; padding: 7px 8px; }
+  .chk .cl { font-size: 9.5px; text-transform: uppercase; letter-spacing: .04em; font-weight: 700;
+    color: var(--muted); margin-bottom: 2px; }
+  .chk .cv { font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 5px; line-height: 1.25; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .good-t { background: var(--good-bg); } .good-t .cv { color: var(--good); } .good-t .dot { background: var(--good); }
+  .warn-t { background: var(--warn-bg); } .warn-t .cv { color: var(--warn); } .warn-t .dot { background: var(--warn); }
+  .bad-t  { background: var(--bad-bg); }  .bad-t .cv  { color: var(--bad); }  .bad-t .dot  { background: var(--bad); }
+  .fill-t { background: var(--filler-bg); } .fill-t .cv { color: var(--filler); } .fill-t .dot { background: var(--filler); }
+
+  .note { display: flex; gap: 9px; background: var(--surface-2); border-radius: 10px; padding: 11px 13px;
+    font-size: 12.5px; color: var(--muted); margin-top: 14px; }
+  .note b { color: var(--ink); }
+  .full { width: 100%; margin-top: 14px; text-align: center; background: none; border: 1px solid var(--line);
+    color: var(--ink); border-radius: 11px; padding: 11px; cursor: pointer; font-family: inherit;
+    font-size: 13px; font-weight: 600; }
+
+  .disclaimer { text-align: center; font-size: 11px; color: var(--muted); margin-top: 20px; line-height: 1.5; }
+  .theme-toggle { position: fixed; top: 14px; right: 14px; background: var(--surface); border: 1px solid var(--line);
+    color: var(--muted); border-radius: 999px; width: 34px; height: 34px; cursor: pointer; font-size: 15px; }
+</style>
+
+<button class="theme-toggle" id="themeBtn" title="Promeni temu">◐</button>
+
+<div class="app">
+  <div class="top">
+    <div class="brand">
+      <div class="logo">D</div>
+      <div><h1>DoseCheck</h1><span>Provera poštenja etikete</span></div>
+    </div>
+    <div class="profile" title="Podaci iz tvog profila">
+      <span class="avatar">M</span> Muško · 50 g · 100 kg
+    </div>
+  </div>
+
+  <div class="steps">
+    <div class="s active" id="st1"><div class="bar"></div><div class="lbl">1 · Problem</div></div>
+    <div class="s" id="st2"><div class="bar"></div><div class="lbl">2 · Etiketa</div></div>
+    <div class="s" id="st3"><div class="bar"></div><div class="lbl">3 · Presuda</div></div>
+  </div>
+
+  <div class="card">
+    <!-- STEP 1 -->
+    <div class="panel on" id="p1">
+      <h2 class="q">Šta Vas muči?</h2>
+      <p class="hint">Izaberite kategoriju problema — pokazaćemo da li Vaš proizvod stvarno radi za to.</p>
+      <div class="cats" id="cats"></div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="panel" id="p2">
+      <h2 class="q">Prepišite etiketu</h2>
+      <p class="hint">Unesite sastojke i doze tačno kako piše na Vašem proizvodu.</p>
+      <p class="prod-tag">Primer učitan: <b id="prodName">—</b> · slobodno menjajte</p>
+      <div class="row head"><span>Sastojak</span><span style="text-align:right">Doza</span><span>Jed.</span><span></span></div>
+      <div class="rows" id="rows"></div>
+      <button class="add" id="addRow">+ Dodaj sastojak</button>
+      <div class="actions">
+        <button class="btn ghost" id="back2">Nazad</button>
+        <button class="btn primary" id="check">Proveri poštenje →</button>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="panel" id="p3">
+      <div class="verdict-top">
+        <div class="ring" id="ring"><div class="n" id="scoreN">–<small>/100</small></div></div>
+        <div class="verdict-txt">
+          <div class="sub">Poštenje etikete</div>
+          <h2 id="verdictWord">—</h2>
+        </div>
+      </div>
+      <div class="ai"><span class="k">AI</span><span id="aiText">—</span></div>
+      <p class="break">Razrada po sastojku</p>
+      <div id="ingList"></div>
+      <div class="note" id="wtNote"></div>
+      <button class="full">Pogledaj pun izveštaj sa studijama →</button>
+      <div class="actions"><button class="btn ghost" id="restart" style="flex:1">↺ Nova provera</button></div>
+    </div>
+  </div>
+
+  <p class="disclaimer">DoseCheck prikazuje obradu naučnih podataka — <b>nije medicinski savet</b>.<br>Mokap za dizajn: podaci su ilustrativni.</p>
+</div>
+
+<script>
+// ---------- referentna baza (ilustrativna, za demo) ----------
+const CATS = [
+  { key:"stomak", ic:"🩺", name:"Stomak i varenje", sub:"mučnina, nadutost, IBS" },
+  { key:"san",    ic:"😴", name:"San i stres",       sub:"nesanica, anksioznost" },
+  { key:"misici", ic:"💪", name:"Mišići i snaga",    sub:"masa, oporavak" },
+  { key:"imunitet", ic:"🛡️", name:"Imunitet",        sub:"česte prehlade" },
+];
+// svaka supstanca: aliasi, jed., efektivni min za cilj, nivo dokaza, forme
+const DB = {
+  "đumbir":     { al:["dumbir","ginger","djumbir"], unit:"mg", goals:{ stomak:{min:1000, ev:"strong"} } },
+  "probiotik":  { al:["probiotic","probiotici"], unit:"mlrd", goals:{ stomak:{min:10, ev:"moderate"} } },
+  "nana":       { al:["peppermint","mint","menta"], unit:"mg", goals:{ stomak:{min:180, ev:"moderate"} } },
+  "melatonin":  { al:[], unit:"mg", goals:{ san:{min:0.5, ev:"strong"} } },
+  "magnezijum": { al:["magnesium","mg"], unit:"mg", junk:["oksid","oxide"], good:["glicinat","glycinate","citrat"], goals:{ san:{min:200, ev:"moderate"} } },
+  "ašvaganda":  { al:["asvaganda","ashwagandha"], unit:"mg", good:["ksm-66","ksm66","sensoril"], goals:{ san:{min:300, ev:"strong"} } },
+  "l-teanin":   { al:["theanine","teanin"], unit:"mg", goals:{ san:{min:200, ev:"moderate"} } },
+  "kreatin":    { al:["creatine"], unit:"g", good:["monohidrat","monohydrate"], goals:{ misici:{min:3, ev:"strong", perKg:0.03} } },
+  "bcaa":       { al:[], unit:"mg", goals:{ misici:{min:5000, ev:"weak"} } },
+  "whey":       { al:["protein","protein prah"], unit:"g", goals:{ misici:{min:25, ev:"strong", perKg:1.8} } },
+  "cink":       { al:["zinc"], unit:"mg", goals:{ imunitet:{min:15, ev:"moderate"} } },
+  "vitamin c":  { al:["c","askorbinska"], unit:"mg", goals:{ imunitet:{min:200, ev:"moderate"} } },
+  "vitamin d":  { al:["d3","d"], unit:"IU", junk:["d2"], goals:{ imunitet:{min:1000, ev:"moderate"} } },
+};
+// unapred popunjeni "proizvodi" po kategoriji (svi namerno sumnjivi)
+const PREFILL = {
+  stomak:{ name:"TummyCalm", items:[["đumbir",200,"mg",""],["probiotik",5,"mlrd",""],["vitamin c",200,"mg",""]] },
+  san:{ name:"SleepEasy", items:[["melatonin",0.3,"mg",""],["magnezijum",100,"mg","oksid"],["ašvaganda",120,"mg",""]] },
+  misici:{ name:"MassPro", items:[["kreatin",1.5,"g","monohidrat"],["bcaa",2000,"mg",""],["whey",12,"g",""]] },
+  imunitet:{ name:"ImmunoBoost", items:[["cink",5,"mg",""],["vitamin c",500,"mg",""],["vitamin d",400,"IU","d2"]] },
+};
+const EV_LABEL = { strong:"jaki dokazi", moderate:"umereni", weak:"slabi", none:"nema dokaza" };
+const PROFILE = { sex:"m", age:50, kg:100 };
+
+let state = { goal:null, rows:[] };
+
+// ---------- helpers ----------
+const norm = s => (s||"").toLowerCase().trim()
+  .replace(/đ/g,"d").replace(/ž/g,"z").replace(/š/g,"s").replace(/č/g,"c").replace(/ć/g,"c")
+  .normalize("NFD").replace(/[̀-ͯ]/g,"");
+function matchSub(name){
+  const n = norm(name); if(!n) return null;
+  for(const key in DB){
+    const cands = [key, ...(DB[key].al||[])].map(norm);
+    if(cands.some(c => c && (n===c || n.includes(c) || c.includes(n)))) return key;
+  }
+  return null;
+}
+const $ = id => document.getElementById(id);
+
+// ---------- STEP 1 ----------
+const catsEl = $("cats");
+CATS.forEach(c => {
+  const b = document.createElement("button");
+  b.className = "cat";
+  b.innerHTML = `<span class="ic">${c.ic}</span><span><b>${c.name}</b><small>${c.sub}</small></span>`;
+  b.onclick = () => { state.goal = c.key; loadPrefill(c.key); goStep(2); };
+  catsEl.appendChild(b);
+});
+
+// ---------- STEP 2 ----------
+function rowHTML(item){
+  return `<input class="nm" placeholder="npr. đumbir" value="${item?item[0]:""}">
+    <input class="dose" placeholder="0" value="${item?item[1]:""}">
+    <input class="unit" placeholder="mg" value="${item?item[2]:""}" style="text-align:center">
+    <button class="del" title="Ukloni">×</button>`;
+}
+function addRow(item){
+  const d = document.createElement("div"); d.className = "row"; d.innerHTML = rowHTML(item);
+  d.querySelector(".del").onclick = () => d.remove();
+  $("rows").appendChild(d);
+}
+function loadPrefill(goal){
+  $("rows").innerHTML = ""; $("prodName").textContent = PREFILL[goal].name;
+  PREFILL[goal].items.forEach(addRow);
+}
+$("addRow").onclick = () => addRow(null);
+$("back2").onclick = () => goStep(1);
+$("check").onclick = () => { computeVerdict(); goStep(3); };
+
+// ---------- STEP 3: logika presude ----------
+function computeVerdict(){
+  const goal = state.goal;
+  const rows = [...document.querySelectorAll("#rows .row")].map(r => ({
+    name: r.querySelector(".nm").value,
+    dose: parseFloat(r.querySelector(".dose").value) || 0,
+    unit: r.querySelector(".unit").value,
+    form: (r.querySelector(".unit") && "") // form not a separate field in this compact demo
+  }));
+  const results = rows.map(r => evalIngredient(r, goal));
+  renderVerdict(results, goal);
+}
+function evalIngredient(r, goal){
+  const key = matchSub(r.name);
+  const info = key && DB[key];
+  const gd = info && info.goals[goal];
+  const res = { display: r.name || "—", amt: `${r.dose||"?"} ${r.unit||""}`.trim(), key };
+  if(!info || !gd){
+    res.filler = true;
+    res.doza = { t:"fill", v:"—" };
+    res.dokaz = { t:"bad", v:"nema veze sa ciljem" };
+    res.forma = { t:"fill", v:"—" };
+    res.ratio = 0; res.ev = "none";
+    return res;
+  }
+  res.ev = gd.ev;
+  // doza: personalizovana ako ima perKg
+  let need = gd.min;
+  res.perKg = gd.perKg ? Math.round(gd.perKg * PROFILE.kg * 10)/10 : null;
+  if(res.perKg) need = res.perKg;
+  const ratio = r.dose / need;
+  res.ratio = ratio; res.need = need; res.unit = info.unit;
+  if(ratio >= 1) res.doza = { t:"good", v:`taman (≥${need}${info.unit})` };
+  else if(ratio >= 0.5) res.doza = { t:"warn", v:`nisko (treba ${need}${info.unit})` };
+  else res.doza = { t:"bad", v:`potcenjeno (treba ${need}${info.unit})` };
+  // dokaz
+  res.dokaz = gd.ev==="strong" ? {t:"good",v:"jaki dokazi"}
+            : gd.ev==="moderate" ? {t:"good",v:"umereni dokazi"}
+            : {t:"warn",v:"slabi dokazi"};
+  // forma (iz kolone jedinice namerno ne čitamo formu u ovom kompaktnom demou, koristimo prefill hint)
+  res.forma = { t:"fill", v:"—" };
+  return res;
+}
+function renderVerdict(results, goal){
+  // skor
+  const relevant = results.filter(r => !r.filler);
+  let score;
+  if(relevant.length === 0){ score = 12; }
+  else {
+    const bestRatio = Math.min(1, Math.max(...relevant.map(r => r.ratio)));
+    const evBonus = Math.max(...relevant.map(r => r.ev==="strong"?25:r.ev==="moderate"?18:8));
+    const fillers = results.length - relevant.length;
+    score = Math.round(bestRatio*70 + evBonus - fillers*6);
+  }
+  score = Math.max(6, Math.min(97, score));
+  const tier = score>=70 ? {c:"good",w:"Pošteno"} : score>=45 ? {c:"warn",w:"Osrednje — preplaćuješ"} : {c:"bad",w:"Varaju te"};
+  const col = getComputedStyle(document.documentElement).getPropertyValue("--"+tier.c);
+  $("ring").style.background = `conic-gradient(${col} ${score*3.6}deg, var(--line) 0)`;
+  $("scoreN").innerHTML = `${score}<small>/100</small>`;
+  $("scoreN").style.color = col;
+  $("verdictWord").textContent = tier.w;
+
+  // AI rečenica
+  const under = relevant.filter(r => r.ratio < 1).length;
+  const fillers = results.length - relevant.length;
+  let ai;
+  if(relevant.length===0) ai = "Nijedan sastojak u ovom proizvodu nema dokaze za ono što Vas muči — plaćate marketing, ne rešenje.";
+  else if(under>0 && fillers>0) ai = `Ovaj proizvod se oslanja na potcenjene doze, a ${fillers} od ${results.length} sastojka nemaju veze sa Vašim ciljem. Potražite jači, čistiji proizvod.`;
+  else if(under>0) ai = "Sastojci su pravi, ali doze su ispod onoga što studije traže — efekat će izostati.";
+  else ai = "Doze su u efektivnom opsegu za Vaš cilj — ovaj proizvod drži reč.";
+  $("aiText").textContent = ai;
+
+  // razrada
+  const list = $("ingList"); list.innerHTML = "";
+  results.forEach(r => {
+    const el = document.createElement("div");
+    el.className = "ing" + (r.filler ? " filler" : "");
+    el.innerHTML = `
+      <div class="ing-h"><b>${r.display}</b><span class="amt">${r.amt}</span></div>
+      <div class="checks">
+        ${chk("Doza", r.doza)}${chk("Forma", r.forma)}${chk("Dokaz", r.dokaz)}
+      </div>`;
+    list.appendChild(el);
+  });
+
+  // napomena o kilaži (personalizacija iz profila)
+  const wtSub = relevant.find(r => r.perKg);
+  const wt = $("wtNote");
+  if(wtSub) wt.innerHTML = `⚖️ <span><b>Vaša kilaža (100 kg) je uračunata:</b> za ${wtSub.display} to znači ciljanih ${wtSub.perKg}${wtSub.unit} dnevno.</span>`;
+  else wt.innerHTML = `⚖️ <span><b>Za ovaj cilj Vaša kilaža ne menja dozu</b> — ne dozvoljavamo lažnu preciznost.</span>`;
+}
+function chk(label, o){
+  const map = { good:"good-t", warn:"warn-t", bad:"bad-t", fill:"fill-t" };
+  return `<div class="chk ${map[o.t]}"><div class="cl">${label}</div><div class="cv"><span class="dot"></span>${o.v}</div></div>`;
+}
+
+// ---------- navigacija ----------
+function goStep(n){
+  [1,2,3].forEach(i => {
+    $("p"+i).classList.toggle("on", i===n);
+    const s = $("st"+i); s.classList.toggle("active", i===n); s.classList.toggle("done", i<n);
+  });
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+$("restart").onclick = () => { state = {goal:null, rows:[]}; goStep(1); };
+
+// ---------- tema ----------
+$("themeBtn").onclick = () => {
+  const cur = document.documentElement.getAttribute("data-theme")
+    || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  document.documentElement.setAttribute("data-theme", cur==="dark" ? "light" : "dark");
+};
+</script>
