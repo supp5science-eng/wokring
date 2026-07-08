@@ -105,13 +105,19 @@ Tajne idu u GitHub Secrets (za Actions) ili `.env` (lokalno): `ANTHROPIC_API_KEY
 
 ---
 
-## 7. Prvih 10 suplemenata (za start)
+## 7. Prvi sastojci (za start) — jedna kategorija, ne nasumična imena
 
-probiotici, magnezijum, vitamin D3, ašvaganda, omega-3, kreatin, melatonin, cink, vitamin C,
-whey protein. Dodaje se lako, jedan po jedan, kroz pipeline.
+**Pristup:** motor je ingredient-based (analizira svaki sastojak proizvoda), pa NE punimo
+„proizvode" nego **rečnik sastojaka**. Za v1 biramo **JEDNU kategoriju** i unesemo sastojke
+koji se pojavljuju u popularnim mešavinama te kategorije — tako app razotkriva i standalone
+proizvode i blendove, uz minimum podataka. (Blendovi su tamo gde je prevara najveća.)
 
-Kategorije problema/ciljeva za v1 (koristiti seed iz `db/schema.sql` — 15 ciljeva):
-Stomak i varenje, San i stres, Mišići i snaga, Imunitet, Srce, Mozak/fokus…
+**Odskočna kategorija v1: „San i stres".** Rečnik sastojaka:
+melatonin · magnezijum (glicinat) · L-teanin · glicin · ašvaganda (KSM-66) · rodiola ·
+valerijana · GABA · kamilica · L-triptofan · 5-HTP · vitamin B6.
+
+Kad ova kategorija radi kraj-do-kraja, ista mašina se širi na sledeću (Energija/fokus,
+Stomak…) — samo se dodaju sastojci kroz pipeline, bez novog koda.
 
 ---
 
