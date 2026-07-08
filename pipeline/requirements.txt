@@ -1,4 +1,5 @@
 # DoseCheck pipeline zavisnosti
-# PubMed korak (pubmed.py, rank.py, ingest.py) koristi SAMO standardnu biblioteku —
-# radi bez ijedne instalacije. Paket ispod treba samo za AI destilaciju (distill.py).
-anthropic>=0.40.0
+# PubMed korak (pubmed.py, rank.py) koristi SAMO standardnu biblioteku — radi bez instalacije.
+anthropic>=0.40.0        # AI destilacija (distill.py)
+psycopg2-binary>=2.9     # upis u Supabase/Postgres (db_upload.py)
+python-dotenv>=1.0       # učitavanje .env (opciono, radi i bez)

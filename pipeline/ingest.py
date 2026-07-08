@@ -26,6 +26,13 @@ import pubmed
 import rank as ranker
 from pubmed import Study
 
+# Učitaj .env ako postoji (ANTHROPIC_API_KEY, DATABASE_URL). Radi i bez paketa.
+try:
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).parent / ".env")
+except ImportError:
+    pass
+
 OUTPUT_DIR = Path(__file__).parent / "output"
 
 
@@ -94,13 +101,27 @@ def build_review_md(term: str, slug: str, studies: list[Study], distilled: dict 
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="DoseCheck — puni bazu suplemenata sa PubMed + AI")
-    ap.add_argument("--supplement", required=True, help='PubMed pojam, npr. "probiotics"')
+    ap.add_argument("--supplement", help='PubMed pojam, npr. "probiotics"')
     ap.add_argument("--slug", help="slug za bazu (default: iz --supplement)")
     ap.add_argument("--top", type=int, default=40, help="broj najkvalitetnijih studija (default 40)")
     ap.add_argument("--retmax", type=int, default=200, help="max rezultata iz pretrage")
     ap.add_argument("--since", type=int, default=2010, help="najstarija godina (default 2010)")
     ap.add_argument("--no-ai", action="store_true", help="preskoči destilaciju, samo studije")
+    ap.add_argument("--upload", action="store_true",
+                    help="posle destilacije upiši u Supabase kao draft (traži DATABASE_URL)")
+    ap.add_argument("--approve", metavar="SLUG",
+                    help="prebaci postojeći supplement iz draft u live i izađi")
     args = ap.parse_args(argv)
+
+    # --approve je samostalna komanda: odobri i izađi.
+    if args.approve:
+        import db_upload
+        ok = db_upload.approve(args.approve)
+        print(f"{'✅ live' if ok else '⚠️  nije nađen'}: {args.approve}")
+        return 0 if ok else 1
+
+    if not args.supplement:
+        ap.error("--supplement je obavezan (osim uz --approve)")
 
     slug = args.slug or args.supplement.lower().replace(" ", "-")
     OUTPUT_DIR.mkdir(exist_ok=True)
@@ -143,7 +164,18 @@ def main(argv=None) -> int:
     md_path.write_text(build_review_md(args.supplement, slug, top, distilled), encoding="utf-8")
     print(f"       → {json_path}")
     print(f"       → {md_path}")
-    print("\nGotovo. Pregledaj review .md, pa (kad Supabase postoji) pokreni upload.")
+
+    if args.upload:
+        if not distilled:
+            print("       ⚠️  Nema destilovanih podataka za upload (pokreni bez --no-ai i sa API ključem).")
+            return 1
+        import db_upload
+        print("       Upisujem u Supabase (draft)…")
+        stats = db_upload.upload(payload)
+        print(f"       ✅ upisano: {stats}")
+        print(f"\nPregledaj review, pa odobri sa:  python ingest.py --approve {slug}")
+    else:
+        print("\nGotovo. Pregledaj review .md, pa pokreni ponovo sa --upload da upišeš u bazu.")
     return 0
 
 

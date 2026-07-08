@@ -26,9 +26,14 @@ pregledaš rezultat pre nego što uđe u bazu.
 
 ```bash
 cd pipeline
-pip install -r requirements.txt          # samo za AI korak; PubMed radi bez ičega
-export ANTHROPIC_API_KEY=...             # za destilaciju
-python ingest.py --supplement "probiotics" --slug probiotics
+pip install -r requirements.txt          # za AI + upis u bazu; PubMed radi bez ičega
+cp .env.example .env                      # pa popuni ANTHROPIC_API_KEY i DATABASE_URL
+
+# 1) povuci studije + destiluj + upiši u Supabase kao DRAFT
+python ingest.py --supplement "probiotics" --slug probiotics --upload
+
+# 2) pregledaj pipeline/output/probiotics-review.md, pa odobri:
+python ingest.py --approve probiotics     # draft -> live
 ```
 
 Rezultat je u `pipeline/output/`:
@@ -36,7 +41,14 @@ Rezultat je u `pipeline/output/`:
 - `{slug}-review.md` — čitljiv pregled na srpskom koji pregledaš pre objave
 
 Opcije: `--top N` (broj studija, default 40), `--since GOD` (najstarija godina),
-`--no-ai` (samo povuci studije, bez destilacije).
+`--no-ai` (samo povuci studije, bez destilacije), `--upload` (upiši u bazu),
+`--approve SLUG` (draft → live).
+
+### Tok kroz bazu
+
+`--upload` upisuje sve kao `status='draft'` (idempotentno — ponovni upload ne
+pravi duplikate). Podaci postaju vidljivi tek posle `--approve`, koji ih prebaci
+u `live`. Tako uvek ti pregledaš pre nego što nešto uđe „uživo".
 
 ### Filter kvaliteta
 
