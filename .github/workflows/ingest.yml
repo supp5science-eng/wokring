@@ -1,0 +1,61 @@
+name: Puni bazu (ingest supplement)
+
+# Pokreće se RUČNO iz browsera: GitHub → tab "Actions" → ovaj workflow →
+# dugme "Run workflow" → ukucaš naziv suplementa. Sve radi na GitHub serveru,
+# ništa se ne instalira na tvom računaru.
+
+on:
+  workflow_dispatch:
+    inputs:
+      supplement:
+        description: 'PubMed pojam (engleski), npr. probiotics, ashwagandha, magnesium'
+        required: true
+        default: 'probiotics'
+      slug:
+        description: 'Kratko ime za bazu (bez razmaka), npr. probiotics'
+        required: true
+        default: 'probiotics'
+      top:
+        description: 'Broj najkvalitetnijih studija'
+        required: false
+        default: '40'
+      upload:
+        description: "Upisati u Supabazu? ('true' ili 'false')"
+        required: false
+        default: 'true'
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Preuzmi kod
+        uses: actions/checkout@v4
+
+      - name: Podesi Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instaliraj zavisnosti (na GitHub serveru)
+        run: pip install -r pipeline/requirements.txt
+
+      - name: Pokreni ingest
+        working-directory: pipeline
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          UPLOAD_FLAG=""
+          if [ "${{ github.event.inputs.upload }}" = "true" ]; then UPLOAD_FLAG="--upload"; fi
+          python ingest.py \
+            --supplement "${{ github.event.inputs.supplement }}" \
+            --slug "${{ github.event.inputs.slug }}" \
+            --top "${{ github.event.inputs.top }}" \
+            $UPLOAD_FLAG
+
+      - name: Sačuvaj review fajl (da ga možeš skinuti iz browsera)
+        uses: actions/upload-artifact@v4
+        with:
+          name: review-${{ github.event.inputs.slug }}
+          path: pipeline/output/*.md
+          if-no-files-found: warn
